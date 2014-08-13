@@ -13,11 +13,14 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.util.Log;
 
 import com.google.android.gms.auth.GoogleAuthException;
@@ -41,6 +44,12 @@ public class ChromeIdentity extends CordovaPlugin {
     // Error codes.
     private static final int GOOGLE_PLAY_SERVICES_UNAVAILABLE = -1;
 
+    // Facebook Account Type
+    private static final String FACEBOOK_ACCOUNT_TYPE = "com.facebook.auth.login";
+
+    // Google Account Type
+    private static final String GOOGLE_ACCOUNT_TYPE = "com.google";
+
     private String accountName = "";
     private CordovaArgs savedCordovaArgs;
     private CallbackContext savedCallbackContext;
@@ -57,6 +66,12 @@ public class ChromeIdentity extends CordovaPlugin {
             return true;
         } else if ("removeCachedAuthToken".equals(action)) {
             removeCachedAuthToken(args, callbackContext);
+            return true;
+        } else if ("getAccountsByType".equals(action)) {
+            getAccountsByType(args, callbackContext);
+            return true;
+        } else if ("getAccounts".equals(action)) {
+            getAccounts(callbackContext);
             return true;
         }
 
@@ -95,7 +110,7 @@ public class ChromeIdentity extends CordovaPlugin {
             this.savedContent = true;
 
             // The "google.com" filter accepts both Google and Gmail accounts.
-            Intent intent = AccountPicker.newChooseAccountIntent(null, null, new String[]{"com.google"}, false, null, null, null, null);
+            Intent intent = AccountPicker.newChooseAccountIntent(null, null, new String[]{GOOGLE_ACCOUNT_TYPE}, false, null, null, null, null);
             this.cordova.startActivityForResult(this, intent, ACCOUNT_CHOOSER_INTENT);
         } else if (availabilityCode == ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED) {
             // Save our data.
@@ -205,6 +220,62 @@ public class ChromeIdentity extends CordovaPlugin {
                 }
             }
         });
+    }
+
+    private void getAccountsByType(final CordovaArgs args, final CallbackContext callbackContext) {
+        this.cordova.getThreadPool().execute(new Runnable() {
+            public void run() {
+                try{
+                    Account[] accounts = getAccountsByType(args.getString(0));
+                    JSONArray ret = new JSONArray();
+                    for(Account account : accounts){
+                        JSONObject jsonAccount = new JSONObject();
+                        jsonAccount.put("name", account.name);
+                        jsonAccount.put("value", account.type);
+                        ret.put(jsonAccount);
+                    }
+                    callbackContext.success(ret);
+                } catch (JSONException e){
+                    callbackContext.error("invalid argument at arguments[0]");
+                }
+            }
+        });
+    }
+
+    private Account[] getAccountsByType(String type) {
+        Account[] accounts = null;
+        Context context = this.cordova.getActivity();
+		AccountManager am = AccountManager.get(context);
+		accounts = am.getAccountsByType(type);
+		return accounts;
+    }
+
+    private void getAccounts(final CallbackContext callbackContext) {
+        this.cordova.getThreadPool().execute(new Runnable() {
+            public void run() {
+                try{
+	                Account[] accounts = getAccounts();
+	                JSONArray ret = new JSONArray();
+	                for(Account account : accounts){
+                        JSONObject jsonAccount = new JSONObject();
+                        jsonAccount.put("name", account.name);
+                        jsonAccount.put("value", account.type);
+                        ret.put(jsonAccount);
+	                }
+	                callbackContext.success(ret);
+                } catch (JSONException e){
+                    callbackContext.error("invalid argument at arguments[0]");
+	            }
+            }
+        });
+    }
+
+    private Account[] getAccounts() {
+        Account[] accounts = null;
+        Context context = this.cordova.getActivity();
+		AccountManager am = AccountManager.get(context);
+		accounts = am.getAccounts();
+		return accounts;
     }
 
     private void getAuthTokenWithAccount(String account, CordovaArgs args, CallbackContext callbackContext) {

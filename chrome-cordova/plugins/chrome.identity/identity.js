@@ -19,6 +19,14 @@ var GOOGLE_PLAY_SERVICES_UNAVAILABLE = -1;
 // We use this constant to note when we don't know which account the token belongs to.  This happens when using the web auth flow.
 var UNKNOWN_ACCOUNT = "Unknown account";
 
+exports.getAccounts = function (type, callback) {
+    exec(callback, null, 'ChromeIdentity', 'getAccounts');
+};
+
+exports.getAccountsByType = function (type, callback) {
+    exec(callback, null, 'ChromeIdentity', 'getAccountsByType', [type]);
+};
+
 exports.getAuthToken = function(details, callback) {
     if (typeof details === 'function' && typeof callback === 'undefined') {
         callback = details;
